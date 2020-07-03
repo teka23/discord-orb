@@ -1,0 +1,51 @@
+description: Notify Discord about an awaiting approval job
+
+parameters:
+  webhook:
+    description: Enter either your Webhook value or use the CircleCI UI to add your token under the 'DISCORD_WEBHOOK' env var
+    type: string
+    default: ${DISCORD_WEBHOOK}
+
+  message:
+    description: Enter custom message.
+    type: string
+    default: A workflow in CircleCI is awaiting your approval.
+
+  color:
+    description: Decimal color value for notification attachment color.
+    type: string
+    default: "3843043"
+
+  mentions:
+    description: A comma separated list of user IDs. No spaces.
+    type: string
+    default: ""
+
+  include_project_field:
+    type: boolean
+    default: true
+    description: >
+      Whether or not to include the Project field in the message
+
+  include_job_number_field:
+    type: boolean
+    default: true
+    description: >
+      Whether or not to include the Job Number field in the message
+
+  url:
+    description: The URL to link back to.
+    type: string
+    default: https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}
+
+executor: alpine
+
+steps:
+  - approval:
+      webhook: << parameters.webhook >>
+      message: << parameters.message >>
+      color: << parameters.color >>
+      mentions: << parameters.mentions >>
+      include_project_field: << parameters.include_project_field >>
+      include_job_number_field: << parameters.include_job_number_field >>
+      url: << parameters.url >>

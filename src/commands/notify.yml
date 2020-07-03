@@ -1,0 +1,143 @@
+description: Notify a Discord channel with a custom message
+
+parameters:
+  webhook:
+    description: Enter either your Webhook value or use the CircleCI UI to add your token under the 'DISCORD_WEBHOOK' env var
+    type: string
+    default: ${DISCORD_WEBHOOK}
+
+  message:
+    description: Enter custom message.
+    type: string
+    default: Your job on CircleCI has completed.
+
+  color:
+    description: Decimal color value for notification attachment color.
+    type: string
+    default: "3355443"
+
+  mentions:
+    description: "A comma separated list of user IDs, role IDs prepended with `&`. No spaces. E.g: 'USERID1,USERID2,&ROLE_ID1,here,everyone'"
+    type: string
+    default: ""
+
+  author_name:
+    description: Optional author name
+    type: string
+    default: ""
+
+  author_link:
+    description: Optional author link
+    type: string
+    default: ""
+
+  author_icon:
+    description: Optional author icon
+    type: string
+    default: ""
+
+  title:
+    description: Optional title
+    type: string
+    default: ""
+
+  title_link:
+    description: Optional title link
+    type: string
+    default: ""
+
+  footer:
+    description: Optional footer
+    type: string
+    default: ""
+
+  ts:
+    description: Optional timestamp
+    type: string
+    default: ""
+
+  include_project_field:
+    description: Whether or not to include the Project field in the message
+    type: boolean
+    default: true
+
+  include_job_number_field:
+    description: Whether or not to include the Job Number field in the message
+    type: boolean
+    default: true
+
+steps:
+  - run:
+      name: Provide error if non-bash shell
+      command: |
+        if [ ! -x /bin/bash ]; then
+          echo Bash not installed.
+          exit 1
+        fi
+
+  - run:
+      name: Provide error if cURL is not installed.
+      command: |
+        which curl > curl_exists; echo $? | grep -q '1' && echo curl not installed && rm curl_exists && exit 1
+        rm curl_exists
+
+  - run:
+      name: Discord Notification
+      shell: /bin/bash
+      command: |
+        # Provide error if no webhook is set and error. Otherwise continue
+        if [ -z "<< parameters.webhook >>" ]; then
+          echo "NO DISCORD WEBHOOK SET"
+          echo "Please input your DISCORD_WEBHOOK value either in the settings for this project, or as a parameter for this orb."
+          exit 1
+        else
+          # Webhook properly set.
+          echo Notifying Discord Channel
+          #Create Members string
+          if [ -n "<< parameters.mentions >>" ]; then
+            IFS="," read -ra DISCORD_MEMBERS \<<< "<< parameters.mentions >>"
+            for i in "${DISCORD_MEMBERS[@]}"; do
+              if echo ${i} | grep -E "^(here|everyone)$" > /dev/null; then
+                DISCORD_MENTIONS="${DISCORD_MENTIONS}@${i} "
+              else
+                DISCORD_MENTIONS="${DISCORD_MENTIONS}<@${i}> "
+              fi
+            done
+          fi
+          curl -X POST -H 'Content-type: application/json' \
+            --data \
+              "{ \
+                \"content\": \"<< parameters.message >> $DISCORD_MENTIONS\", \
+                \"embeds\": [{ \
+                  \"author\": { \
+                    \"name\": \"<< parameters.author_name >>\", \
+                    \"url\": \"<< parameters.author_link >>\", \
+                    \"icon_url\": \"<< parameters.author_icon >>\" \
+                  }, \
+                  \"title\": \"<< parameters.title >>\", \
+                  \"url\": \"<< parameters.title_link >>\", \
+                  \"description\": \"<< parameters.message >> $CIRCLE_BUILD_URL\", \
+                  \"color\": \"<< parameters.color >>\", \
+                  \"fields\": [ \
+                    <<# parameters.include_project_field >>
+                    { \
+                      \"name\": \"Project\", \
+                      \"value\": \"$CIRCLE_PROJECT_REPONAME\", \
+                      \"inline\": true \
+                    }<<# parameters.include_job_number_field >>,<</ parameters.include_job_number_field >> \
+                    <</ parameters.include_project_field >>
+                    <<# parameters.include_job_number_field >>
+                    { \
+                      \"name\": \"Job Number\", \
+                      \"value\": \"$CIRCLE_BUILD_NUM\", \
+                      \"inline\": true \
+                    } \
+                    <</ parameters.include_job_number_field >>
+                  ], \
+                  \"timestamp\": \"<< parameters.ts >>\", \
+                  \"footer\": { \
+                    \"text\": \"<< parameters.footer >>\" \
+                  } \
+                }] \
+              }" << parameters.webhook >>
+        fi

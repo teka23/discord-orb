@@ -1,0 +1,12 @@
+version: 2.1
+
+description: >
+  Easily integrate custom Discord notifications into your CircleCI projects.
+  Create custom alert messages for any job or receive status updates.
+  View this orb's source: https://github.com/teka23/discord-orb
+
+# Create your here: https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+
+## Requirements ##
+## - Bash
+## - cURL
